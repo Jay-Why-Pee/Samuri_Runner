@@ -1,0 +1,158 @@
+User: <!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Samurai Moon Runner</title>
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;background:#0b1020}
+  canvas{display:block}
+  #ui{
+    position:fixed;top:10px;left:10px;
+    color:#fff;font-family:system-ui;font-size:14px
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"></div>
+
+<script>
+const cvs = document.getElementById("c");
+const ctx = cvs.getContext("2d");
+const ui = document.getElementById("ui");
+
+function resize(){
+  cvs.width = innerWidth;
+  cvs.height = innerHeight;
+}
+addEventListener("resize",resize);
+resize();
+
+const GY = ()=>cvs.height*0.8;
+
+// ===== Player =====
+const player = {x:120,y:GY(),vy:0,jump:0,w:30,h:70};
+
+// ===== Input =====
+function doJump(){
+  if(player.jump<2){
+    player.vy=-16;
+    player.jump++;
+  }
+}
+addEventListener("keydown",e=>{
+  if(e.code==="Space")doJump();
+  if(e.code==="ArrowDown")player.vy+=8;
+});
+cvs.addEventListener("touchstart",e=>{
+  e.preventDefault();
+  doJump();
+},{passive:false});
+
+// ===== Obstacles =====
+let obs=[],speed=5,timer=0;
+function spawn(){
+  const t=Math.random()*3|0;
+  if(t===0) obs.push({t,x:cvs.width,y:GY()-90,w:45,h:90});
+  if(t===1) obs.push({t,x:cvs.width,y:-40,w:30,h:30,vy:6});
+  if(t===2) obs.push({t,x:cvs.width,y:GY()-50,w:40,h:50,vx:speed+3});
+}
+
+// ===== Collide =====
+function hit(a,b){
+  return a.x<a.w+b.x && a.x+a.w>b.x && a.y-a.h<b.y+b.h && a.y>b.y;
+}
+
+// ===== Draw Samurai =====
+function drawSamurai(p){
+  ctx.save();
+  ctx.translate(p.x,p.y);
+  ctx.fillStyle="#222";
+  ctx.beginPath();
+  ctx.moveTo(-14,-70);ctx.lineTo(14,-70);ctx.lineTo(20,0);ctx.lineTo(-20,0);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0,-85,12,0,Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle="#bbb";ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(20,-40);ctx.lineTo(48,-58);ctx.stroke();
+  ctx.restore();
+}
+
+// ===== Background =====
+let bg1=0,bg2=0;
+function bg(dt){
+  bg1-=dt*0.02;bg2-=dt*0.05;
+  ctx.fillStyle="#0b1020";ctx.fillRect(0,0,cvs.width,cvs.height);
+  ctx.fillStyle="#f5f3ce";
+  ctx.beginPath();
+  ctx.arc(cvs.width*0.8,cvs.height*0.22,60,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle="#14243f";
+  for(let i=0;i<cvs.width;i+=220){
+    ctx.beginPath();
+    ctx.arc(i+bg1%220,GY(),200,Math.PI,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.fillStyle="rgba(255,255,255,0.06)";
+  for(let i=0;i<cvs.width;i+=160){
+    ctx.beginPath();
+    ctx.arc(i+bg2%160,GY()+20,150,Math.PI,Math.PI*2);
+    ctx.fill();
+  }
+}
+
+// ===== Game =====
+let last=0,start=performance.now(),best=+localStorage.best||0,over=false;
+
+function loop(t){
+  const dt=t-last;last=t;
+  bg(dt);
+
+  if(!over){
+    const sc=((t-start)/1000).toFixed(1);
+    if(sc%10<0.02)speed+=0.02;
+
+    player.vy+=0.7;player.y+=player.vy;
+    if(player.y>=GY()){player.y=GY();player.vy=0;player.jump=0;}
+
+    timer+=dt;
+    if(timer>1400){spawn();timer=0;}
+
+    obs.forEach(o=>{
+      o.x-=speed;
+      if(o.t===1)o.y+=o.vy;
+    });
+    obs=obs.filter(o=>o.x>-80 && o.y<cvs.height+80);
+
+    obs.forEach(o=>{
+      ctx.fillStyle=o.t===0?"#3fa34d":o.t===1?"#888":"#111";
+      ctx.beginPath();
+      ctx.roundRect(o.x,o.y,o.w,o.h,6);
+      ctx.fill();
+      if(hit(player,o)){over=true;best=Math.max(best,sc);localStorage.best=best;}
+    });
+
+    drawSamurai(player);
+    ui.innerHTML=`${sc}s<br>BEST ${best}s`;
+  }else{
+    ctx.fillStyle="rgba(0,0,0,0.6)";
+    ctx.fillRect(0,0,cvs.width,cvs.height);
+    ctx.fillStyle="#fff";
+    ctx.textAlign="center";
+    ctx.font="28px sans-serif";
+    ctx.fillText("GAME OVER",cvs.width/2,cvs.height/2);
+    ctx.font="14px sans-serif";
+    ctx.fillText("touch or refresh",cvs.width/2,cvs.height/2+40);
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
+
+위 코드로 html 파일 만들어서 Github에 파일로 생성해줘
+
+GitHub Copilot: 
